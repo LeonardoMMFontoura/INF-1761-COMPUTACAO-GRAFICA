@@ -4,10 +4,118 @@ import sys
 import math
 import copy
 
-from numpy.lib.financial import _rate_dispatcher
+#from algebra import *
+#arquivo algebra começa aqui
+import numpy as np
+import math
+#from math import sin, cos, sqrt, radians
+import sys 
+
 TOL = sys.float_info.epsilon
 
-from algebra import *
+# Vector algebra
+def vector(x,y,z):
+    return np.array([x,y,z],dtype=np.float64)
+
+def angle(v1,v2):
+    num = dot(v1,v2)
+    den = norm(v1)*norm(v2)
+    return np.arccos(num/den)*180/np.pi if den>TOL else 0
+  
+def norm(v):
+    return math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])
+
+def unitary(v):
+    s = norm(v)
+    if (s>TOL):
+        return v/s
+    else:
+        return None
+
+def dot(u,v):
+    return (u[0]*v[0]+u[1]*v[1]+u[2]*v[2])
+
+def reflect(v,n):
+    r = 2*dot(v,n)*n-v
+    return r
+
+def cross(u,v):
+    return vector(u[1]*v[2] - u[2]*v[1], u[2]*v[0] - u[0]*v[2], u[0]*v[1] - u[1]*v[0])
+
+# Projective and homogeneous vectors
+def pvector(x,y,z,w):
+    return np.array([x,y,z,w],dtype=np.float64)
+
+def to_cartesian(vet4):
+    if vet4[3]>TOL:
+        return vector(vet4[0]/vet4[3],vet4[1]/vet4[3],vet4[2]/vet4[3])
+    else:
+        print("w=0")
+        return None
+
+def to_projective(v):
+    return pvector(v[0],v[1],v[2],1)
+
+# Matrix
+def identity_matrix():
+    return np.eye(4,dtype=np.float64)
+
+def translation_matrix(tx,ty,tz):
+    T = np.eye(4,dtype=np.float64)
+    T[0,3]=tx
+    T[1,3]=ty
+    T[2,3]=tz
+    return T
+
+def scale_matrix(sx,sy,sz):
+    S = np.eye(4,dtype=np.float64)
+    S[0,0]=sx
+    S[1,1]=sy
+    S[2,2]=sz
+    return S
+
+def rotatation_matrix(ang, ex,ey,ez):
+    size = math.sqrt(ex*ex+ey*ey+ez*ez)
+    R = np.eye(4,dtype=np.float64)
+    if size>TOL:
+        ang = math.radians(ang)
+        sin_a = math.sin(ang)
+        cos_a = math.cos(ang)
+        ex /= size
+        ey /= size
+        ez /= size
+        R[0,0]  = cos_a + (1 - cos_a)*ex*ex    #Linha 1
+        R[0,1]  = ex*ey*(1 - cos_a) - ez*sin_a
+        R[0,2]  = ez*ex*(1 - cos_a) + ey*sin_a
+
+        R[1,0]  = ex*ey*(1 - cos_a) + ez*sin_a
+        R[1,1]  = cos_a + (1 - cos_a)*ey*ey
+        R[1,2]  = ey*ez*(1 - cos_a) - ex*sin_a
+
+        R[2,0]  = ex*ez*(1 - cos_a) - ey*sin_a
+        R[2,1]  = ey*ez*(1 - cos_a) + ex*sin_a
+        R[2,2] = cos_a + (1 - cos_a)*ez*ez
+    
+    return R
+
+def change_basis_matrix(xe, ye, ze):
+    R = np.eye(4,dtype=np.float64)
+    R[0,:3] = xe 
+    R[1,:3] = ye
+    R[2,:3] = ze
+    return R
+
+def transf4x3(M,v):
+    x = M[0,0]*v[0]+M[0,1]*v[1]+M[0,2]*v[2]+M[0,3]
+    y = M[1,0]*v[0]+M[1,1]*v[1]+M[1,2]*v[2]+M[1,3]
+    z = M[2,0]*v[0]+M[2,1]*v[1]+M[2,2]*v[2]+M[2,3]
+    return vector(x,y,z)
+
+
+
+
+TOL = sys.float_info.epsilon
+
 
 class Render:
     def __init__(self,scene,bck_color):
@@ -36,7 +144,7 @@ class Render:
                 if cos_spec >0:
                     color += li*ks*(cos_spec**ns)
         return color
-
+ 
     def getABC(self,v0,v1,v2):
         y0 = v0[1]
         y1 = v1[1]
@@ -55,38 +163,38 @@ class Render:
                 return v1,v2,v0
             else:
                 return v2,v1,v0
-
-
+ 
+ 
     def raster_triang(self,v0,v1,v2):  # vi = (x,y,1/z,r,g,b)
         vA, vB,vC = self.getABC(v0,v1,v2)
         yA,yB,yC = int(vA[1]),int(vB[1]),int(vC[1])
-
+ 
         a = np.linspace(vC,vB,yB-yC,endpoint=False)
         b = np.linspace(vC,vA,yA-yC,endpoint=False)
         c = np.linspace(vB,vA,yA-yB,endpoint=False)
         ac = np.concatenate((a,c),axis=0)
-
+ 
         if (vB[0]-vA[0])*(vC[1]-vA[1])-(vC[0]-vA[0])*(vB[1]-vA[1]) > 0:
             left = ac
             right = b
         else:
             left = b
             right = ac
-
-        # left[:,0] = np.rint(left[:,0])
-        # right[:,0] = np.rint(right[:,0])
-
+ 
         fragments = list()
         for i in range(yA-yC):
             xr = int(round(right[1,0]))
-            fragments_hline = np.linspace(left[i],right[i],int(right[i,0]-left[i,0]),endpoint=False) 
-            fragments_hline[:,2]=1.0/fragments_hline[:,2]
-            fragments.append(fragments_hline)
-        fragments = np.array(fragments)
+            hline = np.linspace(left[i],right[i],int(round(right[i,0])-int(left[i,0])),endpoint=False) 
+            hline[:,2]=1.0/hline[:,2]
+            if i ==0:
+                fragments = hline.copy()
+            else:
+                fragments = np.concatenate((fragments,hline),axis=0)
+
         return fragments
         
-
-
+ 
+ 
     def render_zb(self):
         objects = self.scene.get_objects()
         lights = self.scene.get_lights()
@@ -115,7 +223,7 @@ class Render:
                 color = self.phong_shade(vertex,normal, material,lights)
                 vertex_colors.append(color)
             vertex_colors = np.array(vertex_colors)
-
+ 
             #projecao 
             vertices_proj = list()
             for vertex in vertices_eye:
@@ -123,18 +231,18 @@ class Render:
                 vproj = np.dot(self.projection_matrix,vp)
                 vertices_proj.append(vproj)
             vertices_proj= np.array(vertices_proj)
-
-            #Clip
-
+ 
+            
             #Canvas
-            vertices = list()
+            nvertices = vertices_proj.shape[0]
+            vertices = np.zeros((nvertices,6),dtype=np.float64)
             for i,vertex in enumerate(vertices_proj):
                 vn = to_cartesian(vertex)
                 vc = camera.to_canvas(vn)
-                vtx = np.array([vc[0],vc[1],1/vc[2],vertex_colors[0],vertex_colors[1],vertex_colors[2]])
-                vertices.append(vtx)
-            vertices = np.array(vertices)
-
+                vertices[i,:2] = vc[:2]
+                vertices[i,2] = 1/vc[2]
+                vertices[i,3:] = vertex_colors[i,:3]
+            
             #fragmentos gerados pelo triangulo
             triangles = object.get_triangles()
             for t in triangles:
@@ -142,15 +250,16 @@ class Render:
                 v1 = vertices[t[1]]
                 v2 = vertices[t[2]]
                 fragments = self.raster_triang(v0,v1,v2)
+ 
+                for fragment in fragments:
+                    ix = int(fragment[0])   
+                    iy = int(fragment[1])
+                    z = fragment[2]
+                    color = fragment[3:]
+                    if z < self.z_buffer[iy,ix]:
+                        self.frame_buffer[iy,ix]=color
+                        self.z_buffer[iy,ix] = z
 
-            for fragment in fragments:
-                ix = int(fragment[0])
-                iy = int(fragment[1])
-                z = fragment[2]
-                color = fragment[3:]
-                if z < self.z_buffer[iy,ix]:
-                    self.frame_buffer[iy,ix]=color
-                    self.z_buffer[iy,ix] = z
         return
             
     def get_frame_buffer(self):
@@ -158,7 +267,7 @@ class Render:
     
     def get_z_buffer(self):
         return self.z_buffer
-
+ 
 class Camera:
     def __init__(self,fov,w,h,near,far,eye,at,up):
         self.fov = fov
@@ -249,7 +358,7 @@ class TMesh:
         print("Vertices and normals: ")
         for i in range(self.vertices.shape[0]):
             print(f"\t v{i} = {self.vertices[i,:]} n{i} = {self.normals[i, :]}")
-
+ 
         print("Triangles: ")
         for i in range(self.triangles.shape[0]):
             print(f"\t t{i} = {self.triangles[i,:]}")
@@ -271,10 +380,10 @@ class TMesh:
             n = transf4x3(MiT,normal)
             normals.append(unitary(n))
         return np.array(normals)
-
+ 
     def get_triangles(self):
         return self.triangles
-
+ 
     def get_material(self):
         return self.material
         
@@ -323,7 +432,7 @@ class UnityCube(TMesh):
             [20, 21, 22], [20, 22, 23]
             ],dtype=np.int32)
         super().__init__(vertices,triangles,normals,material)
-
+ 
 class Icosahedron(TMesh):
     def __init__(self,material):
         X=0.525731112119133606 
@@ -340,45 +449,45 @@ class Icosahedron(TMesh):
             [6,1,10], [9,0,11], [9,11,2], [9,2,5], [7,2,11] 
         ],dtype=np.int32)
         super().__init__(pts,faces,pts,material)
-
+ 
 class Material:
     def __init__(self,ambient,diffuse,specular,shinesss):
         self.ambient = ambient
         self.diffuse = diffuse
         self.specular = specular
         self.shiness = shinesss
-
+ 
     def show_values(self):
         print("Material")
         print(f'ambient={self.ambient}')
         print(f'diffuse={self.diffuse}')
         print(f'specular={self.specular}')
         print(f'shinesss={self.shiness}')
-
+ 
     def get_values(self):
         return self.ambient,self.diffuse,self.specular,self.shiness
-
+ 
 class Light:
     def __init__(self,position,ambient,intensity):
         self.position = position
         self.ambient = ambient
         self.intensity = intensity
-
+ 
     def show_values(self):
         print(f'position={self.position}')
         print(f'ambient={self.ambient}')
         print(f'intensity={self.intensity}')
-
+ 
     def get_values(self):
         return self.position,self.ambient,self.intensity
-
+ 
 class Scene:
     def __init__(self,camera,objects,materials,lights):
         self.camera = camera
         self.objects = objects  # list of objects
         self.materials = materials # list of materials
         self.lights = lights # list of lights
-
+ 
     def show_values(self):
         self.camera.show_values()
         for object in self.objects:
@@ -387,21 +496,20 @@ class Scene:
             self.material.show_values()
         for light in self.lights:
             self.light.show_values()
-
+ 
     def get_camera(self):
         return self.camera
-
+ 
     def get_objects(self):
         return self.objects
-
+ 
     def get_materials(self):
         return self.materials
-
+ 
     def get_lights(self):
         return self.lights
-
+ 
 def main():
-    #print("Hello World!")
     brass=Material(vector(0.33, 0.22, 0.03),vector(0.78, 0.57, 0.11),vector(1.0, 1.0, 1.0), 27.8)
     camera=Camera(45,640,480,0.5,10,vector(1.5,1.5,1.2), vector(0,0,0), vector(0,0,1))
     cube = UnityCube(brass)
@@ -413,7 +521,6 @@ def main():
     plt.imshow(fbuffer)
     plt.imsave("fbuffer.png",fbuffer)
     plt.show()
-
-
+ 
 if __name__ == "__main__":
     main()
