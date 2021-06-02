@@ -3,5 +3,29 @@
     <body>
         <canvas id="myCanvas" width="640" height="480" style='border:1px solid #000000'>
         </canvas>
+
+    <script id="VShaderSrc" type="nojs"> #version 300 es
+        in vec3 Position;
+        in vec3 vNormal;
+
+        uniform mat4 viewMatrix;
+        uniform mat4 projectionMatrix;
+
+        uniform vec4 objColor;
+        uniform vec3 lightPosition;
+
+        out vec4 vColor;
+        void main(void) {
+            vec4 vPosEye = viewMatrix*vec4(vPosition,1.0);
+            vec4 lightPosEye = ViewMatrix*vec4(lightPosition,1.0);
+            gl_Position = projectionMatrix*vPosEye;
+            vec3 Tolight = normalize(vec3(lightPosEye)-vec3(vPosEye))
+
+        }
+
+    </script> 
+
+    <script src="myUtils.js"></script>
+    <script src="mymain.js"></script>
     </body>    
 </html>
