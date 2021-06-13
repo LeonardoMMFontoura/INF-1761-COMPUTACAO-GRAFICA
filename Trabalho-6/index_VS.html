@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="PT-BR">
+<head>
+<title>T6- COMPUTACAO GRAFICA</title>
+<meta charset="UTF-8">
+</head>
+    <html>>
+    <body onload="main()">
+        <canvas id="myCanvas" width="640" height="480" style='border:1px solid #000'>
+        </canvas>
+    <p id="message"></p>
+    <script id="vShaderSrc" type="nojs">#version 300 es
+        precision mediump float;
+        in vec3 vPosition;
+        in vec3 vNormal;
+
+        uniform mat4 viewMatrix;
+        uniform mat4 normalMatrix;
+        uniform mat4 projectionMatrix;
+
+        uniform vec4 objColor;
+        uniform vec4 lightPosition;
+
+        out vec4 vColor;
+        void main(void) {
+            <!-- //passa para as coordenadas da camera -->
+            vec4 vtx = viewMatrix * vec4(vPosition,1.0);
+
+
+            //vec4 vtx = viewMatrix*vec4(vPosition,1.0);
+            
+            vec3 light = vec3(lightPosition);
+            vec3 tolight = normalize(light-vec3(vtx));
+            vec3 normal = normalize(vec3(normalMatrix*vec4(vNormal,0.0)));
+            float ndotl = max(0.0, dot(normal,tolight));
+            vColor += ndotl*objColor*vec4(0.8,0.8,0.8,1.0);
+
+            vec3 rLight = reflect(-toLight,normal);
+            rLigth = normalize(rLight);
+            vec3 toEye = -normalize(vec(vtx));
+            float rdote = max(0.,dot(rLight,toEye));
+            rdote = pow(rdote,60.0); 
+            vColor += ndotl*vec4(0.7,0.7,0.7,1.0)*vec4(0.8,0.8,0.8,1.0);
+            
+            
+            vColor[3] = 1.0;
+            gl_Position = projectionMatrix * vtx;
+        }
+
+    </script> 
+    <script id="fShaderSrc" type=nojs>#version 300 es
+        precision mediump float;
+        in vec4 vColor;    
+        out vec4 fColor;    
+        void main(void){
+            fColor = vColor;
+        }
+    </script>
+    <script src="gl-matrix-min.js"></script>
+    <script src="myUtils.js"></script>
+    <script src="mymain.js"></script>
+    </body>    
+</html>
