@@ -57,13 +57,11 @@ function redraw(now) {
     var normals = sphere.getNormals();
     var indices = sphere.getIndices();
 
-    gl.viewPort(0,0,gl.viewportWidth,gl.viewportHeight);
+    gl.viewport(0,0,gl.viewportWidth,gl.viewportHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    if(!VAO){
-         var VAO = createVAO(vertices, normals, indices);
-    }
-    // var VAO = createVAO(vertices, normals, indices);
+
+    var VAO = createVAO(vertices, normals, indices);
 
 
     gl.bindVertexArray(VAO);
@@ -92,14 +90,13 @@ function redraw(now) {
     // gl.uniformMatrix4fv(program.objColor,objColor);
     gl.uniform4fv(program.objColor,objColor);
 
-    // var lightPosition = [0.0,0.,0.0,1.0];
     var lightPosition = [0.0,0.,0.0,1.0];
-    // gl.uniformMatrix4fv(program.lightPosition,lightPosition);
+    
     gl.uniform4fv(program.lightPosition,lightPosition);
 
-    // msg(indices.lenght);
+    
 
-    gl.drawElements(gl.TRIANGLES, indices.length/3, gl.UNSIGNED_SHORT,0);
+    gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT,0);
 
     gl.bindVertexArray(null);
     upCamera();
@@ -168,7 +165,7 @@ function setProgramVariables(){
 	program.vPosition = gl.getAttribLocation(program,"vPosition");
 	program.vNormal = gl.getAttribLocation(program, "vNormal");
 	// Uniform (for the program, all vertices and fragments)
-    program.ViewMatrix = gl.getUniformLocation(program, "ViewMatrix");
+    program.viewMatrix = gl.getUniformLocation(program, "viewMatrix");
     // program.viewMatrix = gl.getUniformLocation(program, "viewMatrix");
     program.normalMatrix = gl.getUniformLocation(program, "normalMatrix");	
     program.projectionMatrix = gl.getUniformLocation(program, "projectionMatrix");	
